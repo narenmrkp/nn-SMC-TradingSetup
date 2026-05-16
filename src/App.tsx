@@ -4,6 +4,7 @@
  */
 
 import { useEffect, useState } from 'react';
+import { motion } from 'motion/react';
 import { InstitutionalDashboard } from './components/InstitutionalDashboard';
 import { TradingChart } from './components/TradingChart';
 import { TradeHistory } from './components/TradeHistory';
@@ -23,30 +24,59 @@ export default function App() {
   const [activeSymbol, setActiveSymbol] = useState('NIFTY 50');
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const fetchData = async () => {
+  const fetchData = async (retries = 3) => {
     try {
-      const res = await fetch('/api/signals');
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      
+      const res = await fetch('/api/signals', { signal: controller.signal });
+      clearTimeout(timeoutId);
+
       if (!res.ok) {
-        throw new Error(`HTTP error! status: ${res.status}`);
+        const errorText = await res.text().catch(() => 'No error details');
+        throw new Error(`HTTP error! status: ${res.status} - ${errorText}`);
       }
       const json = await res.json();
-      if (!json || typeof json !== 'object' || !json.candles) {
+      if (!json || typeof json !== 'object') {
         throw new Error('Invalid data format received from API');
       }
       setData(json);
       setError(null);
+      setLoading(false); // Success - stop loading
     } catch (err) {
       console.error('Failed to fetch signals:', err);
-      setError(err instanceof Error ? err.message : 'Unknown error occurred');
-    } finally {
-      setLoading(false);
+      if (retries > 0) {
+        console.log(`Retrying fetch... (${retries} left)`);
+        setTimeout(() => fetchData(retries - 1), 2000);
+        return;
+      }
+      let message = 'Unknown error occurred';
+      if (err instanceof Error) {
+        if (err.name === 'AbortError') {
+          message = 'Request timed out';
+        } else {
+          message = err.message;
+        }
+      }
+      setError(message);
+      setLoading(false); // All retries failed - stop loading
     }
   };
 
   useEffect(() => {
-    fetchData();
-    const interval = setInterval(fetchData, 5000); // Update every 5 seconds
-    return () => clearInterval(interval);
+    // Initial fetch with a larger delay to allow server to boot Vite middleware
+    const startupTimeout = setTimeout(() => {
+      fetchData(5); // More retries on startup
+    }, 5000); // 5s delay
+    
+    const interval = setInterval(() => {
+        fetchData(0); // Regular intervals don't need heavy retries
+    }, 15000); // 15s interval
+    
+    return () => {
+        clearTimeout(startupTimeout);
+        clearInterval(interval);
+    };
   }, []);
 
   const handleSymbolSelect = (symbol: string) => {
@@ -56,10 +86,17 @@ export default function App() {
 
   if (loading && !data) {
     return (
-      <div className="h-screen w-screen bg-[#050505] flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4 text-[#00ffff] font-mono">
-          <div className="w-12 h-12 border-4 border-[#00ffff] border-t-transparent rounded-full animate-spin"></div>
-          <p className="animate-pulse tracking-widest text-xs uppercase">Initializing Alpha Link Engine...</p>
+      <div className="h-screen w-screen bg-terminal-bg flex items-center justify-center">
+        <div className="flex flex-col items-center gap-6 text-terminal-accent font-mono">
+          <motion.div 
+            animate={{ rotate: 360 }}
+            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+            className="w-16 h-16 border-[1px] border-terminal-accent border-t-transparent rounded-none"
+          />
+          <div className="flex flex-col items-center gap-1">
+            <p className="animate-pulse tracking-[0.4em] text-[10px] uppercase font-bold">Alpha Neural Link</p>
+            <p className="text-terminal-muted text-[8px] uppercase tracking-widest">Establishing Secure Session...</p>
+          </div>
         </div>
       </div>
     );
@@ -67,15 +104,15 @@ export default function App() {
 
   if (error && !data) {
     return (
-      <div className="h-screen w-screen bg-[#050505] flex items-center justify-center">
-        <div className="bg-red-950/20 border border-red-500/50 p-8 rounded-lg max-w-md text-center">
-          <span className="text-red-500 font-black uppercase tracking-widest block mb-4">Neural Link Failure</span>
-          <p className="text-gray-400 text-sm mb-6">{error}</p>
+      <div className="h-screen w-screen bg-terminal-bg flex items-center justify-center p-6">
+        <div className="bg-terminal-bear/5 border border-terminal-bear/20 p-10 max-w-md w-full">
+          <span className="text-terminal-bear font-display font-bold uppercase tracking-[0.3em] block mb-6 text-center">Neural Link Failure</span>
+          <p className="text-terminal-muted text-[11px] font-mono mb-8 text-center leading-relaxed italic">"{error}"</p>
           <button 
             onClick={() => { setLoading(true); fetchData(); }}
-            className="px-6 py-2 bg-red-500 text-black font-black uppercase text-xs tracking-widest rounded hover:bg-red-400 transition-colors"
+            className="w-full py-4 bg-terminal-bear text-white font-mono font-bold uppercase text-[10px] tracking-widest hover:bg-terminal-bear/80 transition-all"
           >
-            Re-Initialize
+            Re-Initialize Core
           </button>
         </div>
       </div>
@@ -83,46 +120,59 @@ export default function App() {
   }
 
   return (
-    <div className="h-screen w-screen bg-sleek-bg text-[#E0E0E0] flex flex-col overflow-hidden select-none font-sans">
+    <div className="h-screen w-screen bg-terminal-bg text-[#D1D1D6] flex flex-col overflow-hidden select-none font-sans">
       {/* Header */}
-      <header className="h-[60px] bg-sleek-header border-b border-sleek-border flex items-center justify-between px-6 z-30 shrink-0">
-        <div className="flex items-center gap-6">
-          <div className="flex items-center gap-1">
-            <span className="text-sleek-aqua font-black text-2xl tracking-tighter uppercase">NN-SMC</span>
-            <span className="text-[#FF00FF] font-black text-xs ml-1 opacity-80 uppercase tracking-widest bg-[#FF00FF]/10 px-2 py-0.5 rounded">Inst. Pro++</span>
+      <header className="h-[70px] bg-black border-b border-terminal-border flex items-center justify-between px-8 z-30 shrink-0">
+        <div className="flex items-center gap-10">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-terminal-accent flex items-center justify-center">
+                <Activity className="w-5 h-5 text-black" />
+            </div>
+            <div className="flex flex-col">
+                <span className="text-white font-display font-black text-xl tracking-tight leading-none">ALPHA LINK</span>
+                <span className="text-terminal-accent/60 font-mono text-[8px] uppercase tracking-[0.3em] mt-0.5">Quant Execution V4.2</span>
+            </div>
           </div>
           
-          <div className="h-4 w-[1px] bg-sleek-border mx-2"></div>
+          <div className="h-10 w-[1px] bg-terminal-border"></div>
           
-          <div className="flex items-center gap-10">
+          <div className="flex items-center gap-12">
             <div className="flex flex-col">
-              <span className="text-sleek-muted text-[12px] font-extrabold uppercase tracking-widest leading-none mb-1">Active Asset</span>
-              <div className="flex items-center gap-2">
-                <span className="font-black text-base tracking-tight">{activeSymbol}</span>
-                <button 
-                  onClick={() => setIsModalOpen(true)}
-                  className="p-1 rounded bg-sleek-aqua/10 text-sleek-aqua hover:bg-sleek-aqua/20 transition-all border border-sleek-aqua/20"
-                >
-                  <Activity className="w-3.5 h-3.5" />
-                </button>
+              <span className="text-terminal-muted text-[9px] font-bold uppercase tracking-[0.2em] mb-1.5 flex items-center gap-2">
+                <div className="w-1 h-1 bg-terminal-accent rounded-full pulse-accent" /> Active Channel
+              </span>
+              <div className="flex items-center gap-3">
+                <span className="font-display font-bold text-lg text-white tracking-wide">{activeSymbol}</span>
+                <span className="px-2 py-0.5 border border-terminal-border text-terminal-muted text-[8px] font-mono uppercase">LQD: HIGH</span>
+              </div>
+            </div>
+
+            <div className="flex flex-col">
+              <span className="text-terminal-muted text-[9px] font-bold uppercase tracking-[0.2em] mb-1.5">Alpha Confidence</span>
+              <div className="flex items-baseline gap-2">
+                <span className="text-lg font-mono font-bold text-terminal-bull tabular-nums">{data?.confidence || '0%'}</span>
+                <div className="w-12 h-1 bg-terminal-border overflow-hidden">
+                    <div className="h-full bg-terminal-bull" style={{ width: data?.confidence }} />
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-4">
           <button 
             onClick={() => setHistoryCollapsed(!historyCollapsed)}
-            className={`flex items-center gap-2 px-4 py-2 rounded border transition-all ${
-              !historyCollapsed ? 'bg-sleek-aqua text-black border-sleek-aqua shadow-[0_0_15px_rgba(38,255,138,0.3)]' : 'bg-transparent border-sleek-border text-sleek-muted hover:border-sleek-aqua hover:text-white'
+            className={`group h-10 px-6 border transition-all flex items-center gap-3 ${
+              !historyCollapsed ? 'bg-terminal-accent border-terminal-accent text-black font-bold' : 'bg-transparent border-terminal-border text-terminal-muted hover:border-terminal-accent/50 hover:text-white'
             }`}
           >
             <Calendar className="w-4 h-4" />
-            <span className="text-[12px] font-black uppercase tracking-wider">Signals History</span>
+            <span className="text-[10px] font-mono uppercase tracking-[0.2em]">Signal Monitor</span>
           </button>
 
-          <div className={`status-pill ${data?.marketBias === 'BULLISH' ? 'pill-bull' : 'pill-bear'}`}>
-            Bias: {data?.marketBias}
+          <div className={`h-10 px-6 border flex items-center gap-3 ${data?.marketBias === 'BULLISH' ? 'border-terminal-bull/30 bg-terminal-bull/5 text-terminal-bull' : 'border-terminal-bear/30 bg-terminal-bear/5 text-terminal-bear'}`}>
+            <span className="text-[10px] font-mono font-bold uppercase tracking-[0.2em]">{data?.marketBias} BIAS</span>
+            <div className={`w-1.5 h-1.5 rounded-full ${data?.marketBias === 'BULLISH' ? 'bg-terminal-bull animate-pulse shadow-[0_0_8px_rgba(0,255,163,0.5)]' : 'bg-terminal-bear animate-pulse shadow-[0_0_8px_rgba(255,46,91,0.5)]'}`} />
           </div>
         </div>
       </header>
@@ -131,49 +181,45 @@ export default function App() {
       <main className="flex-1 flex overflow-hidden relative">
         {/* Left Sidebar: Watchlist */}
         <div 
-          style={{ width: watchlistCollapsed ? 0 : 320 }}
-          className="bg-sleek-sidebar border-r border-sleek-border flex flex-col shrink-0 overflow-hidden relative transition-all duration-300"
+          style={{ width: watchlistCollapsed ? 0 : 340 }}
+          className="bg-terminal-surface border-r border-terminal-border flex flex-col shrink-0 overflow-hidden relative transition-all duration-500 ease-in-out"
         >
           <Watchlist onSelect={handleSymbolSelect} activeSymbol={activeSymbol} />
         </div>
 
         {/* Trade History Sidebar */}
         <div 
-          style={{ width: historyCollapsed ? 0 : 300 }}
-          className="bg-sleek-sidebar border-r border-sleek-border flex flex-col shrink-0 overflow-hidden transition-all duration-300"
+          style={{ width: historyCollapsed ? 0 : 360 }}
+          className="bg-terminal-surface border-r border-terminal-border flex flex-col shrink-0 overflow-hidden transition-all duration-500 ease-in-out"
         >
           <TradeHistory />
         </div>
 
         {/* Center: Chart Area */}
-        <div className="flex-1 flex flex-col relative bg-sleek-bg overflow-hidden border-r border-sleek-border">
-          {/* Internal Side Toolbar */}
-          <div className="absolute top-4 left-4 z-20 flex flex-col gap-2">
-             <div className="bg-sleek-sidebar/90 p-1 rounded border border-sleek-border flex flex-col gap-1 shadow-2xl backdrop-blur-md">
-                <button 
-                  onClick={() => setWatchlistCollapsed(!watchlistCollapsed)}
-                  className={`p-2 rounded transition-colors ${!watchlistCollapsed ? 'bg-sleek-aqua/20 text-sleek-aqua' : 'text-sleek-muted hover:text-white'}`}
-                  title="Toggle Watchlist"
-                >
-                  <Menu className="w-4 h-4" />
-                </button>
-             </div>
+        <div className="flex-1 flex flex-col relative bg-terminal-bg overflow-hidden">
+          {/* UI Control Overlays */}
+          <div className="absolute top-6 left-6 z-20">
+             <button 
+                onClick={() => setWatchlistCollapsed(!watchlistCollapsed)}
+                className={`p-3 border border-terminal-border bg-black/80 backdrop-blur-md text-terminal-muted hover:text-terminal-accent transition-all ${!watchlistCollapsed ? 'border-terminal-accent/40 text-terminal-accent' : ''}`}
+                title="Toggle Watchlist"
+             >
+                <LayoutGrid className="w-4 h-4" />
+             </button>
           </div>
 
-          <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
+          <div className="absolute top-6 right-6 z-20 flex gap-2">
              <button 
                onClick={() => setFooterCollapsed(!footerCollapsed)}
-               className="bg-sleek-sidebar/80 p-2 rounded border border-sleek-border text-sleek-muted hover:text-white shadow-lg backdrop-blur-sm"
-               title="Toggle Confidence"
+               className={`p-3 border border-terminal-border bg-black/80 backdrop-blur-md text-terminal-muted hover:text-white transition-all ${footerCollapsed ? 'opacity-50' : ''}`}
              >
                {footerCollapsed ? <Maximize2 className="w-4 h-4" /> : <Minimize2 className="w-4 h-4" />}
              </button>
              <button 
                onClick={() => setDashboardCollapsed(!dashboardCollapsed)}
-               className="bg-sleek-sidebar/80 p-2 rounded border border-sleek-border text-sleek-muted hover:text-white shadow-lg backdrop-blur-sm"
-               title="Toggle Intelligence"
+               className={`p-3 border border-terminal-border bg-black/80 backdrop-blur-md text-terminal-muted hover:text-white transition-all ${dashboardCollapsed ? 'opacity-50' : ''}`}
              >
-               {dashboardCollapsed ? <Maximize2 className="w-4 h-4" /> : <Minimize2 className="w-4 h-4" />}
+                {dashboardCollapsed ? <LayoutGrid className="w-4 h-4" /> : <Settings className="w-4 h-4" />}
              </button>
           </div>
 
@@ -182,38 +228,61 @@ export default function App() {
           </div>
         </div>
 
-        {/* Right Sidebar: Stats Dashboard */}
+        {/* Right Sidebar: Execution Dashboard */}
         <div 
-          style={{ width: dashboardCollapsed ? 0 : 320 }}
-          className="shrink-0 bg-sleek-sidebar h-full overflow-y-auto scrollbar-hide relative transition-all duration-300"
+          style={{ width: dashboardCollapsed ? 0 : 360 }}
+          className="shrink-0 bg-terminal-surface h-full overflow-y-auto scrollbar-hide relative transition-all duration-500 ease-in-out"
         >
           <InstitutionalDashboard data={data} activeSymbol={activeSymbol} />
         </div>
       </main>
 
-      {/* Confidence Footer */}
+      {/* Institutional Execution Footer */}
       <footer 
-        style={{ height: footerCollapsed ? 0 : 80 }}
-        className="bg-sleek-header border-t border-sleek-border flex items-center px-6 gap-8 z-30 shrink-0 overflow-hidden relative transition-all duration-300"
+        style={{ height: footerCollapsed ? 0 : 100 }}
+        className="bg-black border-t border-terminal-border flex items-center px-10 z-30 shrink-0 overflow-hidden relative transition-all duration-500 ease-in-out"
       >
-        <div className="flex flex-col w-48 text-sleek-aqua">
-          <span className="text-sleek-muted text-[10px] font-extrabold uppercase tracking-widest mb-2">Alpha Precision Engine</span>
-          <div className="h-1.5 w-full bg-sleek-border rounded-full overflow-hidden">
-            <div 
-              className="h-full bg-sleek-aqua transition-all duration-500"
-              style={{ width: data?.confidence || '0%' }}
-            />
-          </div>
-        </div>
-        
-        <div className="flex items-baseline gap-2">
-          <span className="text-2xl font-black text-white">{data?.confidence || '0%'}</span>
-          <span className="text-sleek-muted text-[10px] font-bold uppercase tracking-wider">Confidence Level</span>
+        <div className="flex items-center gap-12">
+            <div className="flex flex-col gap-2">
+                <span className="text-[9px] font-mono text-terminal-muted uppercase tracking-[0.3em]">Neural Probability Status</span>
+                <div className="flex items-center gap-4">
+                    <span className="text-3xl font-display font-medium text-white tabular-nums drop-shadow-[0_0_15px_rgba(255,255,255,0.1)]">
+                        {data?.confidence || '0%'}
+                    </span>
+                    <div className="flex gap-1.5 h-6 items-end pb-1">
+                        {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
+                            <div 
+                                key={i} 
+                                className={`w-1 transition-all duration-700 ${i <= 6 ? 'bg-terminal-accent' : 'bg-terminal-border'}`}
+                                style={{ height: `${20 + (i * 10)}%` }}
+                             />
+                        ))}
+                    </div>
+                </div>
+            </div>
+
+            <div className="hidden lg:flex flex-col gap-1 border-l border-terminal-border pl-12">
+                <span className="text-[9px] font-mono text-terminal-muted uppercase tracking-widest">Recommended Logic</span>
+                <span className={`text-[12px] font-display font-bold uppercase tracking-wider ${data?.setup?.direction === 'BUY' ? 'text-terminal-bull' : 'text-terminal-bear'}`}>
+                    High Probability {data?.setup?.direction} Execution
+                </span>
+                <span className="text-terminal-muted text-[10px] font-mono uppercase">Target: {data?.setup?.tp1?.toFixed(2)} / Risk: {data?.setup?.sl?.toFixed(2)}</span>
+            </div>
         </div>
 
-        <div className="ml-auto flex items-center gap-3">
-          <button className="bg-sleek-bull text-black px-12 py-3 rounded font-black text-xs uppercase tracking-[0.2em] hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-[0_0_20px_rgba(38,255,138,0.2)]">
-            Institutional Entry
+        <div className="ml-auto flex items-center gap-6">
+          <div className="flex flex-col items-end gap-1">
+            <span className="text-terminal-muted text-[8px] font-mono uppercase tracking-[0.2em]">Alpha Signature</span>
+            <div className="flex gap-1">
+                {[1,2,3,4,5].map(i => <div key={i} className={`w-3 h-[1px] ${i <= 3 ? 'bg-terminal-accent' : 'bg-terminal-border'}`} />)}
+            </div>
+          </div>
+          
+          <button className="group relative">
+            <div className="absolute -inset-1 bg-terminal-bull/20 blur opacity-0 group-hover:opacity-100 transition duration-500" />
+            <div className="relative bg-terminal-bull text-black px-16 py-4 font-display font-bold text-[11px] uppercase tracking-[0.3em] hover:brightness-110 active:scale-95 transition-all shadow-[0_4px_20px_rgba(0,255,163,0.15)]">
+                Execute Inst. Position
+            </div>
           </button>
         </div>
       </footer>

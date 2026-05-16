@@ -95,17 +95,17 @@ export function Watchlist({ onSelect, activeSymbol }: Props) {
   const marketStatus = isMarketOpen(activeGroup);
 
   return (
-    <div className="flex flex-col h-full bg-sleek-sidebar border-r border-sleek-border font-sans">
-      {/* Groups Tabs */}
-      <div className="flex border-b border-sleek-border bg-sleek-header/50">
+    <div className="flex flex-col h-full bg-terminal-surface border-r border-terminal-border font-sans">
+      {/* Groups Tabs - Minimal Terminal Style */}
+      <div className="flex border-b border-terminal-border bg-black/40">
         {WATCHLIST_GROUPS.map((group) => (
           <button
             key={group}
             onClick={() => setActiveGroup(group)}
-            className={`flex-1 py-3 text-[10px] font-black transition-all border-b-2 ${
+            className={`flex-1 py-4 text-[9px] font-mono font-bold transition-all relative ${
               activeGroup === group
-                ? 'border-sleek-aqua text-sleek-aqua bg-sleek-aqua/5'
-                : 'border-transparent text-sleek-muted hover:text-white'
+                ? 'text-terminal-accent after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[1px] after:bg-terminal-accent after:shadow-[0_0_10px_rgba(0,229,255,0.5)]'
+                : 'text-terminal-muted hover:text-white'
             }`}
           >
             {getGroupName(group)}
@@ -114,63 +114,65 @@ export function Watchlist({ onSelect, activeSymbol }: Props) {
       </div>
 
       {/* Market Status Bar */}
-      <div className={`px-4 py-1.5 flex items-center justify-between text-[10px] font-black uppercase tracking-widest ${marketStatus ? 'bg-sleek-bull/10 text-sleek-bull' : 'bg-sleek-bear/10 text-sleek-bear'}`}>
-        <div className="flex items-center gap-1.5">
-            <Clock className="w-3 h-3" />
-            <span>Market {marketStatus ? 'Open' : 'Closed'}</span>
+      <div className={`px-4 py-1.5 flex items-center justify-between text-[9px] font-mono font-bold uppercase tracking-widest bg-black/60 border-b border-terminal-border/30`}>
+        <div className={`flex items-center gap-1.5 ${marketStatus ? 'text-terminal-bull' : 'text-terminal-bear'}`}>
+            <div className={`w-1 h-1 rounded-full ${marketStatus ? 'bg-terminal-bull animate-pulse' : 'bg-terminal-bear'}`} />
+            <span>MKT: {marketStatus ? 'ACTIVE' : 'HIBERNATED'}</span>
         </div>
-        {!marketStatus && activeGroup <= 2 && <span className="opacity-70">HOURS: 09:15 - 15:30</span>}
+        <div className="text-terminal-muted opacity-50 flex items-center gap-1">
+            <Clock className="w-3 h-3" />
+            <span className="tabular-nums">18:05:22 UTC</span>
+        </div>
       </div>
 
-      {/* Search & Add */}
-      <div className="p-4 border-b border-sleek-border">
-        <div className="relative group">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-sleek-muted group-hover:text-sleek-aqua transition-colors" />
+      {/* Search - Integrated look */}
+      <div className="relative border-b border-terminal-border/30">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-3 h-3 text-terminal-muted" />
           <input
             type="text"
-            placeholder="Search Symbols..."
-            className="w-full bg-sleek-bg border border-sleek-border rounded-md px-10 py-2.5 text-[14px] text-white focus:outline-none focus:border-sleek-aqua transition-all placeholder:text-sleek-muted/50 font-bold"
+            placeholder="FILTER ASSETS..."
+            className="w-full bg-transparent px-10 py-4 text-[11px] font-mono text-white placeholder:text-terminal-muted/40 focus:outline-none focus:bg-terminal-accent/5 transition-all"
           />
-        </div>
       </div>
 
       {/* Scripts List */}
-      <div className="flex-1 overflow-y-auto scrollbar-hide py-2">
-          {activeScripts.map((symbol, idx) => (
+      <div className="flex-1 overflow-y-auto scrollbar-hide">
+          {activeScripts.map((symbol) => (
             <div
               key={symbol}
               onClick={() => onSelect(symbol)}
-              className={`flex items-center justify-between px-4 py-3 cursor-pointer group border-b border-sleek-border/20 last:border-0 transition-all ${
-                activeSymbol === symbol ? 'bg-sleek-aqua/10 border-l-4 border-l-sleek-aqua' : 'hover:bg-white/5'
+              className={`flex items-center justify-between px-4 py-3.5 cursor-pointer transition-all border-b border-terminal-border/20 relative group ${
+                activeSymbol === symbol ? 'bg-terminal-accent/[0.04] border-l border-l-terminal-accent shadow-[inset_4px_0_10px_rgba(0,229,255,0.05)]' : 'hover:bg-terminal-accent/[0.02]'
               }`}
             >
-              <div className="flex flex-col">
-                <span className={`text-[15px] font-black tracking-tight ${activeSymbol === symbol ? 'text-sleek-aqua' : 'text-white'}`}>{symbol}</span>
-                <span className="text-[11px] text-sleek-muted uppercase font-bold tracking-wider">
-                  {activeGroup <= 2 ? 'NSE • IND' : activeGroup === 3 ? 'BINANCE' : activeGroup === 4 ? 'FX' : 'COMM'}
+              <div className="flex flex-col gap-0.5">
+                <span className={`text-[13px] font-display font-medium tracking-wide ${activeSymbol === symbol ? 'text-terminal-accent glow-text-accent' : 'text-white group-hover:text-terminal-accent/80'}`}>{symbol}</span>
+                <span className="text-[9px] text-terminal-muted/60 font-mono uppercase tracking-widest font-medium">
+                  {activeGroup <= 2 ? 'CORE • NSE' : activeGroup === 3 ? 'EXCHANGE' : activeGroup === 4 ? 'LIQUIDITY' : 'GLOBAL'}
                 </span>
               </div>
-              <div className="flex items-center gap-3">
-                <div className="flex flex-col items-end">
-                  <span className={`text-[14px] font-mono font-bold text-white`}>
+              <div className="flex flex-col items-end gap-0.5">
+                  <span className={`text-[13px] font-mono font-medium tabular-nums ${activeSymbol === symbol ? 'text-white' : 'text-terminal-muted group-hover:text-white'}`}>
                     {(prices[symbol] || 0).toFixed(2)}
                   </span>
-                  <span className="text-[11px] font-mono text-sleek-muted">
-                    {activeGroup <= 2 ? 'F&O ACTIVE' : 'LIVE'}
-                  </span>
-                </div>
+                  <div className="flex items-center gap-1">
+                      <div className="w-0.5 h-0.5 rounded-full bg-terminal-bull opacity-50 pulse-accent" />
+                      <span className="text-[9px] font-mono text-terminal-muted/40 uppercase font-medium">Live Feed</span>
+                  </div>
               </div>
             </div>
           ))}
       </div>
 
-      {/* Footer Info */}
-      <div className="p-3 bg-sleek-header/30 border-t border-sleek-border flex justify-between items-center text-[10px] uppercase font-black">
-        <div className="flex items-center gap-3">
-            <span className="text-sleek-muted">Holiday Schedule</span>
-            <AlertCircle className="w-3 h-3 text-sleek-muted cursor-help" />
-        </div>
-        <span className="text-sleek-aqua">Live Feed</span>
+      {/* Prop Detail Row */}
+      <div className="p-4 bg-black/40 border-t border-terminal-border flex justify-between items-center">
+            <div className="flex flex-col">
+                <span className="text-[9px] font-mono text-terminal-muted uppercase tracking-tighter italic">Alpha Prop Desk V2.4</span>
+                <span className="text-[8px] font-mono text-terminal-accent/60 uppercase">Institutional Access Granted</span>
+            </div>
+            <div className="flex items-center gap-1">
+                {[1,2,3,4].map(i => <div key={i} className={`w-1 h-1 rounded-sm ${i <= 3 ? 'bg-terminal-accent/40' : 'bg-terminal-border'}`} />)}
+            </div>
       </div>
     </div>
   );

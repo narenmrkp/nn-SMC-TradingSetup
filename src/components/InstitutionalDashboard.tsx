@@ -4,7 +4,8 @@
  */
 
 import { SignalResponse } from '../types';
-import { TrendingUp, TrendingDown, Zap, BarChart3, Target, ShieldAlert, Cpu } from 'lucide-react';
+import { motion } from 'motion/react';
+import { Target, ShieldAlert, Cpu, Zap, Activity, Info } from 'lucide-react';
 
 interface Props {
   data: SignalResponse | null;
@@ -14,126 +15,173 @@ interface Props {
 export function InstitutionalDashboard({ data, activeSymbol }: Props) {
   if (!data) return null;
 
+  const biasColor = data.marketBias === 'BULLISH' ? 'text-terminal-bull' : 'text-terminal-bear';
+  const biasGlow = data.marketBias === 'BULLISH' ? 'glow-text-bull' : 'glow-text-bear';
+
   return (
-    <div className="flex flex-col p-4 gap-6 text-sm font-sans leading-relaxed h-full overflow-y-auto scrollbar-hide pb-20">
-      <div className="flex items-center justify-between">
-        <span className="text-[12px] uppercase text-sleek-muted tracking-[0.2em] font-extrabold">Institutional Sentiment</span>
-        <span className="text-[10px] font-black text-sleek-aqua border border-sleek-aqua/30 px-2 py-0.5 rounded">{activeSymbol}</span>
-      </div>
-
-      {/* Signal Quality Card */}
-      <div className="bg-sleek-aqua/5 border border-sleek-aqua/20 p-5 rounded-lg shadow-inner">
-        <label className="text-sleek-muted text-[10px] uppercase tracking-widest mb-2 block font-bold">SMC Confirmation Score</label>
-        <div className="flex justify-between items-end">
-          <div 
-             className="text-4xl font-black text-sleek-bull leading-none tracking-tighter drop-shadow-[0_0_15px_rgba(38,255,138,0.4)] transition-all"
-          >
-            {data.grade}
-          </div>
-          <div className="text-lg font-bold text-sleek-bull opacity-90">{data.score} / 100</div>
+    <div className="flex flex-col h-full bg-terminal-surface border-l border-terminal-border">
+      {/* 1. MARKET BIAS - THE DOMINANT HIERARCHY START */}
+      <div className="p-6 border-b border-terminal-border/50">
+        <span className="text-xs-mono text-terminal-muted mb-4 block">Institutional Bias</span>
+        <div className="flex flex-col gap-1">
+            <motion.div 
+               initial={{ opacity: 0, x: 20 }}
+               animate={{ opacity: 1, x: 0 }}
+               className={`text-4xl font-display font-bold ${biasColor} ${biasGlow} tracking-tight`}
+            >
+                {data.marketBias}
+            </motion.div>
+            <div className="flex items-center gap-2">
+                <div className={`h-1 w-1 rounded-full animate-pulse ${data.marketBias === 'BULLISH' ? 'bg-terminal-bull' : 'bg-terminal-bear'}`}></div>
+                <span className="text-[10px] font-mono text-terminal-muted uppercase tracking-[0.2em]">Live Neural Sentiment</span>
+            </div>
         </div>
       </div>
 
-      {/* Breakdown */}
-      <div className="space-y-1">
-        <span className="text-[10px] uppercase text-sleek-muted tracking-[0.2em] font-extrabold mb-2 block">Alpha Factors</span>
-        <BreakdownRow label="Trend Alignment" score={data?.breakdown?.trend ?? 0} max={20} />
-        <BreakdownRow label="Liquidity Sweep" score={data?.breakdown?.liquidity ?? 0} max={20} />
-        <BreakdownRow label="Structure (CHOCH)" score={data?.breakdown?.structure ?? 0} max={20} />
-        <BreakdownRow label="Displacement" score={data?.breakdown?.displacement ?? 0} max={15} />
-        <BreakdownRow label="FVG (Retest)" score={data?.breakdown?.fvgRetest ?? 0} max={15} />
-        <BreakdownRow label="Volume Profile" score={data?.breakdown?.volume ?? 0} max={10} />
-      </div>
+      <div className="flex-1 overflow-y-auto scrollbar-hide p-6 space-y-8 pb-12">
+        
+        {/* 2. SIGNAL QUALITY & CONFIDENCE - THE CORE INTELLIGENCE */}
+        <div className="grid grid-cols-2 gap-4">
+            {/* A+ BADGE AREA */}
+            <div className="flex flex-col gap-2">
+                <span className="text-[9px] uppercase font-bold text-terminal-muted tracking-widest">Quality</span>
+                <motion.div 
+                    whileHover={{ scale: 1.05 }}
+                    className={`relative h-20 w-full flex items-center justify-center border ${data.grade === 'A+' ? 'border-terminal-accent shadow-[0_0_20px_rgba(0,229,255,0.1)] bg-terminal-accent/5' : 'border-terminal-border'} transition-all`}
+                >
+                    <span className={`text-4xl font-display font-black ${data.grade === 'A+' ? 'text-terminal-accent glow-text-accent' : 'text-white'}`}>
+                        {data.grade}
+                    </span>
+                    {data.grade === 'A+' && (
+                        <motion.div 
+                            animate={{ opacity: [0.3, 0.6, 0.3] }}
+                            transition={{ duration: 2, repeat: Infinity }}
+                            className="absolute inset-0 bg-terminal-accent/5" 
+                        />
+                    )}
+                </motion.div>
+            </div>
 
-      {/* Trade Parameters Section */}
-      <div className="flex flex-col gap-4 border-t border-sleek-border pt-6">
-        <span className="text-[12px] uppercase text-white tracking-[0.2em] font-extrabold underline underline-offset-8 decoration-sleek-aqua/30">Execution Logic</span>
-        <div className="space-y-0.5 mt-2">
-          <SetupRow label="Signal Direction" value={data?.setup?.direction ?? 'WAIT'} color={data?.setup?.direction === 'BUY' ? 'text-sleek-bull' : 'text-sleek-bear'} />
-          <SetupRow label="Institutional Entry" value={data?.setup?.entry?.toFixed(2) || '-'} color="text-sleek-aqua" />
-          <SetupRow label="Safety Stop (SL)" value={data?.setup?.sl?.toFixed(2) || '-'} color="text-sleek-bear" />
-          <SetupRow label="Primary Target (T1)" value={data?.setup?.tp1?.toFixed(2) || '-'} color="text-sleek-bull" />
-          <SetupRow label="Risk / Reward" value={`1 : ${data?.setup?.rr?.toFixed(2) || '-'}`} color="text-sleek-aqua" />
+            {/* CONFIDENCE RING */}
+            <div className="flex flex-col gap-2">
+                <span className="text-[9px] uppercase font-bold text-terminal-muted tracking-widest">Confidence</span>
+                <div className="relative h-20 w-full flex items-center justify-center">
+                    <svg className="w-16 h-16 transform -rotate-90">
+                        <circle
+                            cx="32"
+                            cy="32"
+                            r="28"
+                            stroke="currentColor"
+                            strokeWidth="3"
+                            fill="transparent"
+                            className="text-terminal-border"
+                        />
+                        <motion.circle
+                            cx="32"
+                            cy="32"
+                            r="28"
+                            stroke="currentColor"
+                            strokeWidth="3"
+                            fill="transparent"
+                            strokeDasharray="176"
+                            initial={{ strokeDashoffset: 176 }}
+                            animate={{ strokeDashoffset: 176 - (176 * parseInt(data.confidence)) / 100 }}
+                            className="text-terminal-accent"
+                            style={{ strokeLinecap: 'round' }}
+                        />
+                    </svg>
+                    <span className="absolute inset-0 flex items-center justify-center text-[13px] font-mono font-bold text-white">
+                        {data.confidence}
+                    </span>
+                </div>
+            </div>
         </div>
-      </div>
 
-      {/* Bias Meter */}
-      <div className="mt-4 p-4 bg-sleek-header/50 border border-sleek-border rounded-lg relative overflow-hidden">
-        <div className="flex justify-between items-center">
-            <span className="text-[11px] font-black text-sleek-muted uppercase">Market Bias</span>
-            <span className="text-[14px] font-black text-sleek-bull">{data.score > 50 ? 'STRONGLY BULLISH' : 'NEUTRAL'}</span>
+        {/* 3. EXECUTION PARAMETERS - HEDGE FUND STYLE */}
+        <div className="space-y-4">
+            <div className="flex items-center gap-2 mb-4">
+                <Cpu className="w-3.5 h-3.5 text-terminal-accent" />
+                <span className="text-[10px] font-bold text-white uppercase tracking-widest">Execution Engine</span>
+                <div className="flex-1 h-[1px] bg-terminal-border"></div>
+            </div>
+
+            <div className="space-y-1">
+                <ExecutionRow label="Institutional Entry" value={data?.setup?.entry?.toFixed(2)} active />
+                <ExecutionRow label="Protective SL" value={data?.setup?.sl?.toFixed(2)} color="text-terminal-bear" />
+                <ExecutionRow label="Target Objective" value={data?.setup?.tp1?.toFixed(2)} color="text-terminal-bull" />
+                <ExecutionRow label="Risk Ratio" value={`1 : ${data?.setup?.rr?.toFixed(2)}`} accent />
+            </div>
         </div>
-        <div 
-          className="absolute top-0 left-0 h-1 bg-sleek-bull transition-all duration-1000"
-          style={{ width: `${data.score}%` }}
-        ></div>
+
+        {/* 4. ALPHA BREAKDOWN - DECISION HIERARCHY */}
+        <div className="space-y-4">
+            <div className="flex items-center gap-2 mb-4">
+                <Zap className="w-3.5 h-3.5 text-terminal-accent" />
+                <span className="text-[10px] font-bold text-white uppercase tracking-widest">Decision Factors</span>
+                <div className="flex-1 h-[1px] bg-terminal-border"></div>
+            </div>
+
+            <div className="space-y-2">
+                <FactorRow label="Order Flow Alignment" score={data?.breakdown?.trend} max={20} />
+                <FactorRow label="Liquidity Engineering" score={data?.breakdown?.liquidity} max={20} />
+                <FactorRow label="Structural Shift" score={data?.breakdown?.structure} max={20} />
+                <FactorRow label="Displacement (Fair Value)" score={data?.breakdown?.displacement} max={15} />
+                <FactorRow label="Volume Anomalies" score={data?.breakdown?.volume} max={10} />
+            </div>
+        </div>
+
+        {/* 5. SYSTEM STATUS */}
+        <div className="mt-8 pt-8 border-t border-terminal-border/30">
+            <div className="bg-black/40 p-4 border border-terminal-border">
+                <div className="flex items-center justify-between mb-2">
+                    <span className="text-[9px] font-mono text-terminal-muted uppercase">Terminal Status</span>
+                    <span className="text-[9px] font-mono text-terminal-bull uppercase flex items-center gap-1">
+                        <div className="w-1 h-1 bg-terminal-bull rounded-full" /> Operational
+                    </span>
+                </div>
+                <p className="text-[11px] text-terminal-muted leading-relaxed">
+                    Alpha-Link Neural Engine processing real-time SMC structures for {activeSymbol}. Probability calculated via multi-timeframe liquidity sweeps.
+                </p>
+            </div>
+        </div>
       </div>
     </div>
   );
 }
 
-
-function DepthRow({ price, size, color }: { price: string; size: string; color: string }) {
-    return (
-        <div className="flex justify-between px-2 py-1 bg-white/[0.02] rounded">
-            <span className={`${color} font-bold`}>{price}</span>
-            <span className="text-gray-500">{size}</span>
-        </div>
-    )
-}
-
-function KpiBlock({ label, value }: { label: string; value: string }) {
-    return (
-        <div className="bg-sleek-header/50 border border-sleek-border p-2 rounded flex flex-col">
-            <span className="text-[9px] text-sleek-muted font-black uppercase text-center">{label}</span>
-            <span className="text-[12px] font-mono font-bold text-center text-white">{value}</span>
-        </div>
-    )
-}
-
-function Level({ label, val, color }: { label: string; val: string; color: string }) {
-    return (
-        <div className="flex flex-col items-center">
-            <span className="text-[8px] text-sleek-muted font-black">{label}</span>
-            <span className={`text-[11px] font-black ${color}`}>{val}</span>
-        </div>
-    )
-}
-
-function ChainRow({ calls, strike, puts, highlight }: { calls: string; strike: string; puts: string; highlight?: boolean }) {
-    return (
-        <div className={`flex justify-between items-center text-[11px] px-2 py-1 rounded ${highlight ? 'bg-sleek-aqua/10 border border-sleek-aqua/20 shadow-glow-sm' : ''}`}>
-            <span className="text-sleek-bear font-bold">{calls}</span>
-            <span className="font-black text-white">{strike}</span>
-            <span className="text-sleek-bull font-bold">{puts}</span>
-        </div>
-    )
-}
-
-function BreakdownRow({ label, score, max }: { label: string; score: number; max: number }) {
+function ExecutionRow({ label, value, active, color, accent }: { 
+    label: string, 
+    value: string | undefined, 
+    active?: boolean,
+    color?: string,
+    accent?: boolean
+}) {
   return (
-    <div className="flex justify-between items-center py-2.5 border-b border-sleek-border/50 text-[15px]">
-      <span className="text-gray-400 font-medium">{label}</span>
-      <span className={score > 0 ? "text-sleek-bull font-black" : "text-gray-700"}>
-        {score}/{max}
+    <div className={`flex justify-between items-center p-3 rounded-none border-b border-terminal-border/30 transition-all hover:bg-terminal-accent/5 group ${active ? 'bg-terminal-accent/[0.03] border-l-2 border-l-terminal-accent' : ''}`}>
+      <span className="text-[11px] text-terminal-muted uppercase font-medium">{label}</span>
+      <span className={`font-mono text-sm font-bold ${color || (accent ? 'text-terminal-accent' : 'text-white')}`}>
+        {value || '--'}
       </span>
     </div>
   );
 }
 
-function SetupRow({ label, value, color }: { label: string; value: string; color: string }) {
+function FactorRow({ label, score, max }: { label: string, score: number, max: number }) {
+  const percentage = (score / max) * 100;
   return (
-    <div className="flex justify-between items-center py-2.5 border-b border-sleek-border/50 text-[15px]">
-      <span className="text-gray-200 font-medium">{label}</span>
-      <span className={`${color} font-black uppercase`}>{value}</span>
+    <div className="space-y-1.5">
+      <div className="flex justify-between items-end">
+        <span className="text-[11px] text-terminal-muted/80">{label}</span>
+        <span className="text-[10px] font-mono text-terminal-bull">{score}/{max}</span>
+      </div>
+      <div className="h-1 w-full bg-terminal-border rounded-full overflow-hidden">
+        <motion.div 
+            initial={{ width: 0 }}
+            animate={{ width: `${percentage}%` }}
+            transition={{ duration: 1, delay: 0.5 }}
+            className={`h-full ${percentage > 70 ? 'bg-terminal-bull' : percentage > 40 ? 'bg-terminal-accent' : 'bg-terminal-muted'}`}
+        />
+      </div>
     </div>
   );
-}
-
-function TrendUp(props: any) {
-  return <TrendingUp {...props} />;
-}
-
-function TrendDown(props: any) {
-  return <TrendingDown {...props} />;
 }

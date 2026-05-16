@@ -51,37 +51,40 @@ export function TradingChart({ data, symbol }: Props) {
 
     const chart = createChart(chartContainerRef.current, {
       layout: {
-        background: { type: ColorType.Solid, color: '#05050A' },
-        textColor: '#6B7280',
-        fontSize: 11,
+        background: { type: ColorType.Solid, color: '#020205' },
+        textColor: '#525266',
+        fontSize: 10,
+        fontFamily: 'JetBrains Mono',
       },
       grid: {
-        vertLines: { color: '#161922' },
-        horzLines: { color: '#161922' },
+        vertLines: { color: '#0A0A12' },
+        horzLines: { color: '#0A0A12' },
       },
       crosshair: {
         mode: 1,
-        vertLine: { color: '#26FF8A', width: 1, style: 2 },
-        horzLine: { color: '#26FF8A', width: 1, style: 2 },
+        vertLine: { color: '#00E5FF', width: 1, style: 2, labelBackgroundColor: '#00E5FF' },
+        horzLine: { color: '#00E5FF', width: 1, style: 2, labelBackgroundColor: '#00E5FF' },
       },
       timeScale: {
-        borderColor: '#1F2235',
+        borderColor: '#14141A',
         timeVisible: true,
         secondsVisible: false,
       },
       rightPriceScale: {
-        borderColor: '#1F2235',
+        borderColor: '#14141A',
         scaleMargins: { top: 0.1, bottom: 0.3 },
       },
+      handleScroll: true,
+      handleScale: true,
     });
 
     // Use a more robust series creation
     const candlestickSeries = chart.addSeries(CandlestickSeries, {
-      upColor: '#26FF8A',
-      downColor: '#FF3E3E',
+      upColor: '#00FFA3',
+      downColor: '#FF2E5B',
       borderVisible: false,
-      wickUpColor: '#26FF8A',
-      wickDownColor: '#FF3E3E',
+      wickUpColor: '#00FFA3',
+      wickDownColor: '#FF2E5B',
     });
 
     const vSeries = chart.addSeries(HistogramSeries, {
@@ -223,7 +226,7 @@ export function TradingChart({ data, symbol }: Props) {
             .map(s => ({
                 time: Math.floor(Number(s.time)) as UTCTimestamp,
                 position: (s.direction === 'bull' ? 'aboveBar' : 'belowBar') as any,
-                color: s.direction === 'bull' ? '#00E0FF' : '#FF3E3E',
+                color: s.direction === 'bull' ? '#00E5FF' : '#FF2E5B',
                 shape: (s.direction === 'bull' ? 'arrowDown' : 'arrowUp') as any,
                 text: String(s.type || ''),
                 size: 1,
@@ -236,9 +239,9 @@ export function TradingChart({ data, symbol }: Props) {
                 markers.push({
                     time: lastTime,
                     position: (data.setup.direction === 'BUY' ? 'belowBar' : 'aboveBar') as any,
-                    color: data.setup.direction === 'BUY' ? '#26FF8A' : '#FF3E3E',
+                    color: data.setup.direction === 'BUY' ? '#00FFA3' : '#FF2E5B',
                     shape: (data.setup.direction === 'BUY' ? 'arrowUp' : 'arrowDown') as any,
-                    text: 'INST. ' + data.setup.direction,
+                    text: '⚡ EXECUTE ' + data.setup.direction,
                     size: 2,
                 });
             }
