@@ -1,0 +1,8 @@
+{
+  "name": "Institutional SMC Trading Engine",
+  "description": "High-performance Smart Money Concepts (SMC) trading signal app with FVG, CHOCH, and institutional liquidity tracking.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
